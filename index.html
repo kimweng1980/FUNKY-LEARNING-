@@ -133,7 +133,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
    * CONFIG — paste a Google Apps Script "Web app" URL here once deployed
    * to sync results to a teacher tracker Sheet. Leave blank to skip syncing.
    * ==================================================================== */
-  var SHEET_ENDPOINT = '';
+  var SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzkNgrmX8ifP-X4x9sM_PY9BLt2ni7_jlz0sAhRdV1E-lmJ4-zJmvqZNeZlpe_nk1Vc/exec';
 
   var app = document.getElementById('app');
 
@@ -1794,7 +1794,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
   var TOTALIV3 = QUESTIONSIV3.length;
 
   /* ---- Intervene 1 (between Level 1 & 2) ---- */
-  var SIV1 = { phase: 'startiv1', id: '', name: '', idErr: false, nameErr: false, qi: 0, items: [], qShownAt: 0, picked: null, last: null };
+  var SIV1 = { phase: 'startiv1', id: '', name: '', idErr: false, nameErr: false, qi: 0, items: [], qShownAt: 0, picked: null, last: null, syncStatus: null };
   function curQIV1() { return QUESTIONSIV1[SIV1.qi]; }
   function startQuizIV1() {
     var id = norm(SIV1.id), name = norm(SIV1.name);
@@ -1818,7 +1818,16 @@ textarea:focus { outline: none; border-color: var(--accent); }
   function finishQuizIV1() {
     var score = SIV1.items.filter(function (it) { return it.correct; }).length;
     SIV1.result = { score: score };
-    S.phase = 'doneiv1'; render();
+    S.phase = 'doneiv1'; SIV1.syncStatus = SHEET_ENDPOINT ? 'sending' : 'nosync'; render();
+    if (SHEET_ENDPOINT) sendToSheetIV1(score);
+  }
+  function sendToSheetIV1(score) {
+    var payload = { level: 'iv1', id: SIV1.id, name: SIV1.name, score: score, total: TOTALIV1, submittedAt: new Date().toISOString(),
+      items: SIV1.items.map(function (it) { return { correct: it.correct }; }) };
+    try {
+      fetch(SHEET_ENDPOINT, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) })
+        .then(function () { SIV1.syncStatus = 'ok'; render(); }, function () { SIV1.syncStatus = 'failed'; render(); });
+    } catch (e) { SIV1.syncStatus = 'failed'; render(); }
   }
   function playAgainIV1() { SIV1.qi = 0; SIV1.items = []; nextQuestionIV1(); }
   function switchStudentIV1() { SIV1.id = ''; SIV1.name = ''; SIV1.idErr = false; SIV1.nameErr = false; S.phase = 'startiv1'; render(); }
@@ -1894,6 +1903,13 @@ textarea:focus { outline: none; border-color: var(--accent); }
     ];
   }
 
+  function syncLineIV1() {
+    if (SIV1.syncStatus === 'sending') return h('div', { class: 'syncline' }, 'Saving your results…');
+    if (SIV1.syncStatus === 'ok') return h('div', { class: 'syncline ok' }, 'Saved to your teacher’s tracker.');
+    if (SIV1.syncStatus === 'failed') return h('div', { class: 'syncline failed' }, 'Could not reach the tracker — show this screen to your teacher.');
+    return h('div', { class: 'syncline' }, 'Tracker not connected yet — show this screen to your teacher.');
+  }
+
   function viewDoneIV1() {
     var R = SIV1.result;
     return [
@@ -1903,6 +1919,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
         h('div', { class: 'rank' }, R.score + ' of ' + TOTALIV1 + ' correct'),
         h('p', { class: 'bigscore' }, SIV1.name.toUpperCase() + ' · ' + SIV1.id.toUpperCase()),
         h('p', { class: 'rankline' }, R.score >= 5 ? 'Bluff Detector!' : (R.score >= 3 ? 'Sharp Eye!' : 'Keep Guessing!')),
+        syncLineIV1(),
         h('div', { class: 'row' },
           h('button', { class: 'btn', type: 'button', onclick: function () { S.phase = 'start2'; render(); } }, 'Continue to Level 2 →'),
           h('button', { class: 'btn ghost', type: 'button', onclick: playAgainIV1 }, 'Play again'),
@@ -1913,7 +1930,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
   }
 
   /* ---- Intervene 2 (between Level 3 & 4) ---- */
-  var SIV2 = { phase: 'startiv2', id: '', name: '', idErr: false, nameErr: false, qi: 0, items: [], qShownAt: 0, picked: null, last: null };
+  var SIV2 = { phase: 'startiv2', id: '', name: '', idErr: false, nameErr: false, qi: 0, items: [], qShownAt: 0, picked: null, last: null, syncStatus: null };
   function curQIV2() { return QUESTIONSIV2[SIV2.qi]; }
   function startQuizIV2() {
     var id = norm(SIV2.id), name = norm(SIV2.name);
@@ -1937,7 +1954,16 @@ textarea:focus { outline: none; border-color: var(--accent); }
   function finishQuizIV2() {
     var score = SIV2.items.filter(function (it) { return it.correct; }).length;
     SIV2.result = { score: score };
-    S.phase = 'doneiv2'; render();
+    S.phase = 'doneiv2'; SIV2.syncStatus = SHEET_ENDPOINT ? 'sending' : 'nosync'; render();
+    if (SHEET_ENDPOINT) sendToSheetIV2(score);
+  }
+  function sendToSheetIV2(score) {
+    var payload = { level: 'iv2', id: SIV2.id, name: SIV2.name, score: score, total: TOTALIV2, submittedAt: new Date().toISOString(),
+      items: SIV2.items.map(function (it) { return { correct: it.correct }; }) };
+    try {
+      fetch(SHEET_ENDPOINT, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) })
+        .then(function () { SIV2.syncStatus = 'ok'; render(); }, function () { SIV2.syncStatus = 'failed'; render(); });
+    } catch (e) { SIV2.syncStatus = 'failed'; render(); }
   }
   function playAgainIV2() { SIV2.qi = 0; SIV2.items = []; nextQuestionIV2(); }
   function switchStudentIV2() { SIV2.id = ''; SIV2.name = ''; SIV2.idErr = false; SIV2.nameErr = false; S.phase = 'startiv2'; render(); }
@@ -2013,6 +2039,13 @@ textarea:focus { outline: none; border-color: var(--accent); }
     ];
   }
 
+  function syncLineIV2() {
+    if (SIV2.syncStatus === 'sending') return h('div', { class: 'syncline' }, 'Saving your results…');
+    if (SIV2.syncStatus === 'ok') return h('div', { class: 'syncline ok' }, 'Saved to your teacher’s tracker.');
+    if (SIV2.syncStatus === 'failed') return h('div', { class: 'syncline failed' }, 'Could not reach the tracker — show this screen to your teacher.');
+    return h('div', { class: 'syncline' }, 'Tracker not connected yet — show this screen to your teacher.');
+  }
+
   function viewDoneIV2() {
     var R = SIV2.result;
     return [
@@ -2022,6 +2055,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
         h('div', { class: 'rank' }, R.score + ' of ' + TOTALIV2 + ' correct'),
         h('p', { class: 'bigscore' }, SIV2.name.toUpperCase() + ' · ' + SIV2.id.toUpperCase()),
         h('p', { class: 'rankline' }, R.score >= 5 ? 'Bluff Detector!' : (R.score >= 3 ? 'Sharp Eye!' : 'Keep Guessing!')),
+        syncLineIV2(),
         h('div', { class: 'row' },
           h('button', { class: 'btn', type: 'button', onclick: function () { S.phase = 'start4'; render(); } }, 'Continue to Level 4 →'),
           h('button', { class: 'btn ghost', type: 'button', onclick: playAgainIV2 }, 'Play again'),
@@ -2032,7 +2066,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
   }
 
   /* ---- Intervene 3 (between Level 5 & 6) ---- */
-  var SIV3 = { phase: 'startiv3', id: '', name: '', idErr: false, nameErr: false, qi: 0, items: [], qShownAt: 0, picked: null, last: null };
+  var SIV3 = { phase: 'startiv3', id: '', name: '', idErr: false, nameErr: false, qi: 0, items: [], qShownAt: 0, picked: null, last: null, syncStatus: null };
   function curQIV3() { return QUESTIONSIV3[SIV3.qi]; }
   function startQuizIV3() {
     var id = norm(SIV3.id), name = norm(SIV3.name);
@@ -2056,7 +2090,16 @@ textarea:focus { outline: none; border-color: var(--accent); }
   function finishQuizIV3() {
     var score = SIV3.items.filter(function (it) { return it.correct; }).length;
     SIV3.result = { score: score };
-    S.phase = 'doneiv3'; render();
+    S.phase = 'doneiv3'; SIV3.syncStatus = SHEET_ENDPOINT ? 'sending' : 'nosync'; render();
+    if (SHEET_ENDPOINT) sendToSheetIV3(score);
+  }
+  function sendToSheetIV3(score) {
+    var payload = { level: 'iv3', id: SIV3.id, name: SIV3.name, score: score, total: TOTALIV3, submittedAt: new Date().toISOString(),
+      items: SIV3.items.map(function (it) { return { correct: it.correct }; }) };
+    try {
+      fetch(SHEET_ENDPOINT, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) })
+        .then(function () { SIV3.syncStatus = 'ok'; render(); }, function () { SIV3.syncStatus = 'failed'; render(); });
+    } catch (e) { SIV3.syncStatus = 'failed'; render(); }
   }
   function playAgainIV3() { SIV3.qi = 0; SIV3.items = []; nextQuestionIV3(); }
   function switchStudentIV3() { SIV3.id = ''; SIV3.name = ''; SIV3.idErr = false; SIV3.nameErr = false; S.phase = 'startiv3'; render(); }
@@ -2132,6 +2175,13 @@ textarea:focus { outline: none; border-color: var(--accent); }
     ];
   }
 
+  function syncLineIV3() {
+    if (SIV3.syncStatus === 'sending') return h('div', { class: 'syncline' }, 'Saving your results…');
+    if (SIV3.syncStatus === 'ok') return h('div', { class: 'syncline ok' }, 'Saved to your teacher’s tracker.');
+    if (SIV3.syncStatus === 'failed') return h('div', { class: 'syncline failed' }, 'Could not reach the tracker — show this screen to your teacher.');
+    return h('div', { class: 'syncline' }, 'Tracker not connected yet — show this screen to your teacher.');
+  }
+
   function viewDoneIV3() {
     var R = SIV3.result;
     return [
@@ -2141,6 +2191,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
         h('div', { class: 'rank' }, R.score + ' of ' + TOTALIV3 + ' correct'),
         h('p', { class: 'bigscore' }, SIV3.name.toUpperCase() + ' · ' + SIV3.id.toUpperCase()),
         h('p', { class: 'rankline' }, R.score >= 5 ? 'Bluff Detector!' : (R.score >= 3 ? 'Sharp Eye!' : 'Keep Guessing!')),
+        syncLineIV3(),
         h('div', { class: 'row' },
           h('button', { class: 'btn', type: 'button', onclick: function () { S.phase = 'start6'; render(); } }, 'Continue to Level 6 →'),
           h('button', { class: 'btn ghost', type: 'button', onclick: playAgainIV3 }, 'Play again'),
@@ -2534,7 +2585,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
   ];
   var TOTALIV4 = QUESTIONSIV4.length;
 
-  var SIV4 = { phase: 'startiv4', id: '', name: '', idErr: false, nameErr: false, qi: 0, items: [], qShownAt: 0, picked: null, last: null };
+  var SIV4 = { phase: 'startiv4', id: '', name: '', idErr: false, nameErr: false, qi: 0, items: [], qShownAt: 0, picked: null, last: null, syncStatus: null };
   function curQIV4() { return QUESTIONSIV4[SIV4.qi]; }
   function startQuizIV4() {
     var id = norm(SIV4.id), name = norm(SIV4.name);
@@ -2558,7 +2609,16 @@ textarea:focus { outline: none; border-color: var(--accent); }
   function finishQuizIV4() {
     var score = SIV4.items.filter(function (it) { return it.correct; }).length;
     SIV4.result = { score: score };
-    S.phase = 'doneiv4'; render();
+    S.phase = 'doneiv4'; SIV4.syncStatus = SHEET_ENDPOINT ? 'sending' : 'nosync'; render();
+    if (SHEET_ENDPOINT) sendToSheetIV4(score);
+  }
+  function sendToSheetIV4(score) {
+    var payload = { level: 'iv4', id: SIV4.id, name: SIV4.name, score: score, total: TOTALIV4, submittedAt: new Date().toISOString(),
+      items: SIV4.items.map(function (it) { return { correct: it.correct }; }) };
+    try {
+      fetch(SHEET_ENDPOINT, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) })
+        .then(function () { SIV4.syncStatus = 'ok'; render(); }, function () { SIV4.syncStatus = 'failed'; render(); });
+    } catch (e) { SIV4.syncStatus = 'failed'; render(); }
   }
   function playAgainIV4() { SIV4.qi = 0; SIV4.items = []; nextQuestionIV4(); }
   function switchStudentIV4() { SIV4.id = ''; SIV4.name = ''; SIV4.idErr = false; SIV4.nameErr = false; S.phase = 'startiv4'; render(); }
@@ -2634,6 +2694,13 @@ textarea:focus { outline: none; border-color: var(--accent); }
     ];
   }
 
+  function syncLineIV4() {
+    if (SIV4.syncStatus === 'sending') return h('div', { class: 'syncline' }, 'Saving your results…');
+    if (SIV4.syncStatus === 'ok') return h('div', { class: 'syncline ok' }, 'Saved to your teacher’s tracker.');
+    if (SIV4.syncStatus === 'failed') return h('div', { class: 'syncline failed' }, 'Could not reach the tracker — show this screen to your teacher.');
+    return h('div', { class: 'syncline' }, 'Tracker not connected yet — show this screen to your teacher.');
+  }
+
   function viewDoneIV4() {
     var R = SIV4.result;
     return [
@@ -2643,6 +2710,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
         h('div', { class: 'rank' }, R.score + ' of ' + TOTALIV4 + ' correct'),
         h('p', { class: 'bigscore' }, SIV4.name.toUpperCase() + ' · ' + SIV4.id.toUpperCase()),
         h('p', { class: 'rankline' }, R.score >= 5 ? 'Bluff Detector!' : (R.score >= 3 ? 'Sharp Eye!' : 'Keep Guessing!')),
+        syncLineIV4(),
         h('div', { class: 'row' },
           h('button', { class: 'btn', type: 'button', onclick: function () { S.phase = 'start9'; render(); } }, 'Continue to Level 9 →'),
           h('button', { class: 'btn ghost', type: 'button', onclick: playAgainIV4 }, 'Play again'),
@@ -3218,57 +3286,4 @@ textarea:focus { outline: none; border-color: var(--accent); }
       home: viewHome,
       start1: viewStart1, quiz1: viewQuiz1, feedback1: viewFeedback1, done1: viewDone1,
       start2: viewStart2, quiz2: viewQuiz2, feedback2: viewFeedback2, done2: viewDone2,
-      start3: viewStart3, quiz3: viewQuiz3, feedback3: viewFeedback3, done3: viewDone3,
-      start4: viewStart4, quiz4: viewQuiz4, feedback4: viewFeedback4, done4: viewDone4,
-      start5: viewStart5, quiz5: viewQuiz5, feedback5: viewFeedback5, done5: viewDone5,
-      start6: viewStart6, quiz6: viewQuiz6, feedback6: viewFeedback6, done6: viewDone6,
-      start7: viewStart7, quiz7: viewQuiz7, feedback7: viewFeedback7, done7: viewDone7,
-      startiv1: viewStartIV1, quiziv1: viewQuizIV1, feedbackiv1: viewFeedbackIV1, doneiv1: viewDoneIV1,
-      startiv2: viewStartIV2, quiziv2: viewQuizIV2, feedbackiv2: viewFeedbackIV2, doneiv2: viewDoneIV2,
-      startiv3: viewStartIV3, quiziv3: viewQuizIV3, feedbackiv3: viewFeedbackIV3, doneiv3: viewDoneIV3,
-      start8: viewStart8, quiz8: viewQuiz8, feedback8: viewFeedback8, done8: viewDone8,
-      startiv4: viewStartIV4, quiziv4: viewQuizIV4, feedbackiv4: viewFeedbackIV4, doneiv4: viewDoneIV4,
-      start9: viewStart9, quiz9: viewQuiz9, feedback9: viewFeedback9, done9: viewDone9,
-      start10: viewStart10, quiz10: viewQuiz10, feedback10: viewFeedback10, done10: viewDone10,
-      startiv5: viewStartIV5, writeiv5: viewWriteIV5, doneiv5: viewDoneIV5,
-      start11: viewStart11, quiz11: viewQuiz11, feedback11: viewFeedback11, done11: viewDone11
-    };
-    var nodes = views[S.phase]().filter(Boolean);
-    app.replaceChildren.apply(app, nodes);
-    if (S.phase === 'start1') { var idEl1 = document.getElementById('idinput1'); if (idEl1 && !S1.id) idEl1.focus(); }
-    if (S.phase === 'feedback1') { var nb1 = document.getElementById('nextbtn1'); if (nb1) nb1.focus(); }
-    if (S.phase === 'start2') { var idEl2 = document.getElementById('idinput2'); if (idEl2 && !S2.id) idEl2.focus(); }
-    if (S.phase === 'feedback2') { var nb2 = document.getElementById('nextbtn2'); if (nb2) nb2.focus(); }
-    if (S.phase === 'start3') { var idEl3 = document.getElementById('idinput3'); if (idEl3 && !S3.id) idEl3.focus(); }
-    if (S.phase === 'feedback3') { var nb3 = document.getElementById('nextbtn3'); if (nb3) nb3.focus(); }
-    if (S.phase === 'start4') { var idEl4 = document.getElementById('idinput4'); if (idEl4 && !S4.id) idEl4.focus(); }
-    if (S.phase === 'feedback4') { var nb4 = document.getElementById('nextbtn4'); if (nb4) nb4.focus(); }
-    if (S.phase === 'start5') { var idEl5 = document.getElementById('idinput5'); if (idEl5 && !S5.id) idEl5.focus(); }
-    if (S.phase === 'feedback5') { var nb5 = document.getElementById('nextbtn5'); if (nb5) nb5.focus(); }
-    if (S.phase === 'start6') { var idEl6 = document.getElementById('idinput6'); if (idEl6 && !S6.id) idEl6.focus(); }
-    if (S.phase === 'feedback6') { var nb6 = document.getElementById('nextbtn6'); if (nb6) nb6.focus(); }
-    if (S.phase === 'startiv1') { var idEliv1 = document.getElementById('idinputiv1'); if (idEliv1 && !SIV1.id) idEliv1.focus(); }
-    if (S.phase === 'feedbackiv1') { var nbiv1 = document.getElementById('nextbtniv1'); if (nbiv1) nbiv1.focus(); }
-    if (S.phase === 'startiv2') { var idEliv2 = document.getElementById('idinputiv2'); if (idEliv2 && !SIV2.id) idEliv2.focus(); }
-    if (S.phase === 'feedbackiv2') { var nbiv2 = document.getElementById('nextbtniv2'); if (nbiv2) nbiv2.focus(); }
-    if (S.phase === 'startiv3') { var idEliv3 = document.getElementById('idinputiv3'); if (idEliv3 && !SIV3.id) idEliv3.focus(); }
-    if (S.phase === 'feedbackiv3') { var nbiv3 = document.getElementById('nextbtniv3'); if (nbiv3) nbiv3.focus(); }
-    if (S.phase === 'start8') { var idEl8 = document.getElementById('idinput8'); if (idEl8 && !S8.id) idEl8.focus(); }
-    if (S.phase === 'feedback8') { var nb8 = document.getElementById('nextbtn8'); if (nb8) nb8.focus(); }
-    if (S.phase === 'startiv4') { var idEliv4 = document.getElementById('idinputiv4'); if (idEliv4 && !SIV4.id) idEliv4.focus(); }
-    if (S.phase === 'feedbackiv4') { var nbiv4 = document.getElementById('nextbtniv4'); if (nbiv4) nbiv4.focus(); }
-    if (S.phase === 'start9') { var idEl9 = document.getElementById('idinput9'); if (idEl9 && !S9.id) idEl9.focus(); }
-    if (S.phase === 'feedback9') { var nb9 = document.getElementById('nextbtn9'); if (nb9) nb9.focus(); }
-    if (S.phase === 'start10') { var idEl10 = document.getElementById('idinput10'); if (idEl10 && !S10.id) idEl10.focus(); }
-    if (S.phase === 'feedback10') { var nb10 = document.getElementById('nextbtn10'); if (nb10) nb10.focus(); }
-    if (S.phase === 'startiv5') { var idEliv5 = document.getElementById('idinputiv5'); if (idEliv5 && !SIV5.id) idEliv5.focus(); }
-    if (S.phase === 'writeiv5') { var l1iv5 = document.getElementById('letter1iv5'); if (l1iv5) l1iv5.focus(); }
-    if (S.phase === 'start11') { var idEl11 = document.getElementById('idinput11'); if (idEl11 && !S11.id) idEl11.focus(); }
-    if (S.phase === 'feedback11') { var nb11 = document.getElementById('nextbtn11'); if (nb11) nb11.focus(); }
-    if (S.phase === 'start7') { var idEl7 = document.getElementById('idinput7'); if (idEl7 && !S7.id) idEl7.focus(); }
-    if (S.phase === 'feedback7') { var nb7 = document.getElementById('nextbtn7'); if (nb7) nb7.focus(); }
-  }
-
-  render();
-})();
-</script>
+      start3: viewStart3, quiz3: viewQuiz3, f
